@@ -1,0 +1,61 @@
+<html lang="zh">
+<head>
+    <link rel="stylesheet" href="resource/style.css">
+    <script type="text/javascript" src="./resource/Rx.min.js"></script>
+    <title> rx-demo</title>
+</head>
+
+<body>
+<div id="anchor">
+    <div class="video" id="video">
+        <div class="masker"></div>
+        <video width="100%" controls="">
+            <source src="http://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_stereo.ogg"
+                    type="video/ogg">
+            Your browser does not support HTML5 video.
+        </video>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+
+  const video = document.getElementById('video')
+  const anchor = document.getElementById('anchor')
+
+  const scroll = Rx.Observable.fromEvent(document, 'scroll')
+  const mouseDown = Rx.Observable.fromEvent(video, 'mousedown')
+  const mouseUp = Rx.Observable.fromEvent(document, 'mouseup')
+  const mouseMove = Rx.Observable.fromEvent(document, 'mousemove')
+
+  const validValue = (value, max, min)=>{
+    return Math.min(Math.max(value, min), max)
+  }
+
+  scroll
+    .map(()=>anchor.getBoundingClientRect().bottom < 0)
+    .subscribe(bool=>{
+      if (bool) {
+        video.classList.add('video-fixed')
+      } else {
+        video.classList.remove('video-fixed')
+      }
+    })
+
+  mouseDown
+    .filter(()=>video.classList.contains('video-fixed'))
+    .map(()=>mouseMove.takeUntil(mouseUp))
+    .concatAll()
+    .withLatestFrom(mouseDown, (move, down)=>{
+      return {
+        x: validValue(move.clientX - down.offsetX, window.innerWidth - 320, 0),
+        y: validValue(move.clientY - down.offsetY, window.innerHeight - 180, 0)
+      }
+    })
+    .subscribe(pos=>{
+      video.style.top = pos.y + 'px'
+      video.style.left = pos.x + 'px'
+    })
+</script>
+</body>
+</html>
